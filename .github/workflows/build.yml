@@ -1,0 +1,83 @@
+
+name: Android Native Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Android Shared Libraries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK and NDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2" \
+            "ndk;24.0.7856742"
+
+      - name: Set permissions
+        run: chmod +x gradlew
+
+      - name: Build APK and native libraries
+        run: |
+          ./gradlew :app:assembleDebug \
+            --no-daemon \
+            --stacktrace
+
+      - name: Collect build outputs
+        run: |
+          mkdir -p output
+
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+
+          test -f "$APK"
+          cp "$APK" output/
+
+          unzip -q "$APK" 'lib/*/*.so' -d output
+
+          find output -name "*.so" -exec file {} \;
+
+      - name: Upload ARM64 libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-ARM64
+          path: output/lib/arm64-v8a/*.so
+          if-no-files-found: error
+
+      - name: Upload ARM32 libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-ARM32
+          path: output/lib/armeabi-v7a/*.so
+          if-no-files-found: error
+
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-ImGui-Test-APK
+          path: output/app-debug.apk
+          if-no-files-found: error
+          

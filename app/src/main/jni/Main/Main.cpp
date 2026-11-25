@@ -20,7 +20,7 @@ void *thread(void *) {
     
     initModMenu((void *)DrawMenu);
     
-    SetupInputHooks();
+    setupInputHooks();
 
     //Hooks, Patches and Pointers here
     //Example:

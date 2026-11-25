@@ -1,10 +1,3 @@
-// Utils/MemfdExec.h
-// Drop-in memfd trampoline pool for SDK 36 W^X — replaces Dobby's anonymous mmap.
-// Call InitTrampolinePool() once before any DobbyHook().
-// NDK r25c+, minSdkVersion 29 (memfd_create via syscall fallback for API 29).
-//
-// FILL: adjust TRAMPOLINE_POOL_SIZE = expected hook count x 64 bytes.
-
 #pragma once
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -14,8 +7,14 @@
 #include <android/log.h>
 #include <errno.h>
 
+// MFD_EXEC was added in Linux 6.3 — NDK r24 headers don't have it yet.
+// Define it manually; the kernel ignores unknown flags gracefully on older builds.
+#ifndef MFD_EXEC
+#define MFD_EXEC 0x0010U
+#endif
+
 #define KXMODS_TRAMPOLINE_TAG  "KXMODS_TRAMPOLINEALLOC"
-#define TRAMPOLINE_POOL_SIZE   (64 * 64)   // 64 hooks x 64 bytes each
+#define TRAMPOLINE_POOL_SIZE   (64 * 64)
 
 static int    g_memfd      = -1;
 static void*  g_pool_rx    = nullptr;

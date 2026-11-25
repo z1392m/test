@@ -34,7 +34,7 @@ android {
             path file('src/main/jni/Build/Android.mk')
         }
     }
-    ndkVersion = '24.0.7856742'
+    ndkVersion = '24.0.8215888'
 }
 
 dependencies {

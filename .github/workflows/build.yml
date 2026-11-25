@@ -15,25 +15,34 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
-    env:
-      NDK_VERSION: "24.0.8215888"
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install Android NDK
+      - name: Download Android NDK r24
         run: |
-          sdkmanager --install "ndk;${NDK_VERSION}"
+          curl -fL --retry 3 \
+            https://dl.google.com/android/repository/android-ndk-r24-linux.zip \
+            -o ndk.zip
+
+          echo "eceb18f147282eb93615eff1ad84a9d3962fbb31  ndk.zip" | sha1sum -c -
+
+          unzip -q ndk.zip -d "$RUNNER_TEMP"
+          rm -f ndk.zip
+
+          echo "NDK_HOME=$RUNNER_TEMP/android-ndk-r24" >> "$GITHUB_ENV"
+
+      - name: Verify Android NDK
+        run: |
+          chmod +x "$NDK_HOME/ndk-build"
+          cat "$NDK_HOME/source.properties"
+          "$NDK_HOME/ndk-build" --version
 
       - name: Compile shared libraries
         run: |
-          NDK="$ANDROID_HOME/ndk/$NDK_VERSION"
           JNI="$GITHUB_WORKSPACE/app/src/main/jni"
 
-          chmod +x "$NDK/ndk-build"
-
-          "$NDK/ndk-build" \
+          "$NDK_HOME/ndk-build" \
             NDK_PROJECT_PATH=null \
             APP_BUILD_SCRIPT="$JNI/Build/Android.mk" \
             NDK_APPLICATION_MK="$JNI/Build/Application.mk" \
@@ -44,7 +53,7 @@ jobs:
             NDK_LIBS_OUT="$GITHUB_WORKSPACE/libs" \
             -j"$(nproc)"
 
-      - name: Verify compiled libraries
+      - name: Verify output
         run: |
           find libs -type f -name "*.so" -exec file {} \;
           test -f libs/arm64-v8a/libModMenu.so
@@ -52,17 +61,16 @@ jobs:
           test -f libs/armeabi-v7a/libModMenu.so
           test -f libs/armeabi-v7a/libLoader.so
 
-      - name: Upload ARM64
+      - name: Upload ARM64 libraries
         uses: actions/upload-artifact@v4
         with:
           name: Native-Libraries-ARM64
           path: libs/arm64-v8a/*.so
           if-no-files-found: error
 
-      - name: Upload ARM32
+      - name: Upload ARM32 libraries
         uses: actions/upload-artifact@v4
         with:
           name: Native-Libraries-ARM32
           path: libs/armeabi-v7a/*.so
           if-no-files-found: error
-          

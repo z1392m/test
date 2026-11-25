@@ -169,28 +169,33 @@ void setupInputHooks() {
 void *initModMenu(void *menu_addr) {
     menuAddress = (void (*)())menu_addr;
     
+        // SDK 36 W^X: init memfd trampoline pool before ANY DobbyHook
+    if (InitTrampolinePool() != 0) {
+        LOGE("Trampoline pool init failed — may SIGSEGV on SDK 36");
+    }
+
     do {
         sleep(1);
     } while (!isLibraryLoaded(OBFUSCATE("libEGL.so")));
 
-    // Хук eglSwapBuffers
     auto swapBuffers = ((uintptr_t)DobbySymbolResolver(
         OBFUSCATE("libEGL.so"), 
         OBFUSCATE("eglSwapBuffers")
     ));
-    
-    KittyMemory::ProtectAddr(
-        (void*)swapBuffers, 
-        sizeof(swapBuffers), 
-        PROT_READ | PROT_WRITE | PROT_EXEC
-    );
-    
+
+    // REMOVED: KittyMemory::ProtectAddr(...PROT_EXEC) — broken on SDK 36 W^X
+
     DobbyHook(
         (void*)swapBuffers, 
         (void*)swapbuffers_hook, 
         (void**)&o_swapbuffers
     );
 
+    // SDK 36 W^X: Dobby returns null orig if mprotect was denied
+    if (!o_swapbuffers) {
+        LOGE("eglSwapBuffers hook FAILED — o_swapbuffers null, W^X blocked Dobby");
+        return nullptr;
+    }
   
 
     LOGI(OBFUSCATE("ImGUI Hooks initialized!!! "));

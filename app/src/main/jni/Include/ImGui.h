@@ -247,6 +247,10 @@ void internalDrawMenu(int width, int height) {
 }
 
 EGLBoolean swapbuffers_hook(EGLDisplay dpy, EGLSurface surf) {
+    // SDK 36 W^X guard: if Dobby hook failed, o_swapbuffers is null.
+    // Calling it without this guard = null deref SIGSEGV, same crash.
+    if (!o_swapbuffers) return EGL_FALSE;
+
     EGLint w, h;
     eglQuerySurface(dpy, surf, EGL_WIDTH, &w);
     eglQuerySurface(dpy, surf, EGL_HEIGHT, &h);

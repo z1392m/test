@@ -34,12 +34,11 @@ jobs:
 
       - name: Install Android SDK and NDK
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager \
+          sdkmanager --install \
             "platform-tools" \
             "platforms;android-33" \
             "build-tools;33.0.2" \
-            "ndk;24.0.7856742"
+            "ndk;24.0.8215888"
 
       - name: Set permissions
         run: chmod +x gradlew

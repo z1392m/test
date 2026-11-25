@@ -20,6 +20,7 @@
 #include "Dobby/dobby.h"
 #include "Obfuscate.h"
 #include "Logger.h"
+#include "../Utils/MemfdExec.h"
 
 //YOUR XDL PATH
 #include <../Include/xdl/include/xdl.h>
